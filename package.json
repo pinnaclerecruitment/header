@@ -1,5 +1,5 @@
 {
-  "name": "my-loxo-thing",
+  "name": "loxo-backend",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
@@ -8,7 +8,7 @@
   "dependencies": {
     "express": "^4.17.1",
     "node-fetch": "^2.6.1",
-    "dotenv": "^16.0.0",
+    "dotenv": "^10.0.0",
     "cors": "^2.8.5"
   }
 }
