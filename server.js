@@ -6,18 +6,33 @@ const cors = require('cors');
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:63342'] // For local testing
+}));
+app.use(express.json());
+
+// Root route to avoid "cannot GET /"
+app.get('/', (req, res) => {
+    res.send('Loxo backend is running. Use /loxo-data to fetch job data.');
+});
 
 app.get('/loxo-data', async (req, res) => {
     try {
-        const response = await fetch('https://app.loxo.co/api/pinnacle-recruitment-services/jobs', {
+        // Check API key
+        const apiKey = req.headers['x-api-key'];
+        if (!apiKey || apiKey !== process.env.API_KEY) {
+            return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
+        }
+
+        const response = await fetch('https://app.loxo.co/pinnacle-recruitment-services/jobs', {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${process.env.LOXO_TOKEN}`
+                'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
+                'Accept': 'application/json'
             }
         });
         if (!response.ok) {
-            throw new Error('Loxo messed up');
+            throw new Error(`Loxo API error: ${response.status}`);
         }
         const data = await response.json();
         res.json(data);
