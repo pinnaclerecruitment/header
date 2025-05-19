@@ -20,7 +20,7 @@ app.get('/loxo-data', async (req, res) => {
             return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
         }
 
-        const response = await fetch('https://app.loxo.co/pinnacle-recruitment-services/jobs/YOUR_JOB_SLUG', {
+        const response = await fetch('https://app.loxo.co/api/pinnacle-recruitment-services/jobs', {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
