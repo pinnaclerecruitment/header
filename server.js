@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
 
 app.get('/loxo-data', async (req, res) => {
     try {
-        const response = await fetch('https://app.loxo.co/pinnacle-recruitment-services/jobs/YOUR_JOB_SLUG', {
+        const response = await fetch('https://app.loxo.co/api/pinnacle-recruitment-services/jobs', {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
