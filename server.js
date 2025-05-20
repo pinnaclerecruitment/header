@@ -6,10 +6,14 @@ const cors = require('cors');
 dotenv.config();
 
 const app = express();
-app.use(cors()); // Lets your webpage connect
+app.use(cors());
 app.use(express.json());
 
-// Root route
+console.log('Environment:', {
+    token: process.env.LOXO_TOKEN ? 'Token present' : 'Token missing',
+    port: process.env.PORT || 3000
+});
+
 app.get('/', (req, res) => {
     res.send('Backend is running. Use /loxo-data for jobs.');
 });
@@ -20,7 +24,7 @@ app.get('/loxo-data', async (req, res) => {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
-                'Accept': 'application/json'
+                'Accept': 'application/json',
                 'Cache-Control': 'no-cache'
             }
         });
@@ -28,8 +32,11 @@ app.get('/loxo-data', async (req, res) => {
             throw new Error(`Loxo error: ${response.status}`);
         }
         const data = await response.json();
+        console.log('API response at:', new Date().toISOString(), 'Data:', data);
+        res.set('Cache-Control', 'no-store');
         res.json(data);
     } catch (error) {
+        console.error('Error fetching Loxo data:', error);
         res.status(500).json({ error: error.message });
     }
 });
