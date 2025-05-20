@@ -35,7 +35,7 @@ app.get('/loxo-data', async (req, res) => {
         const data = await response.json();
         // Log response details to track updates
         console.log('API response at:', new Date().toISOString(), 'Data count:', data.length || 'No length property', 'Data:', data);
-        res.set('Cache-Control', 'no-store'); // Prevent server response caching
+        res.set('Cache-Control', 'no-cache'); // Prevent server response caching
         res.json(data);
     } catch (error) {
         console.error('Error fetching Loxo data:', error.message);
