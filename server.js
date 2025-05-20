@@ -21,7 +21,11 @@ app.get('/', (req, res) => {
 
 app.get('/loxo-data', async (req, res) => {
     try {
-        const response = await fetch('https://app.loxo.co/api/pinnacle-recruitment-services/jobs?status=active', {
+        // Get page parameter from query, default to 1 if not provided
+        const page = req.query.page || 1;
+        const apiUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs?status=active&page=${page}`;
+        
+        const response = await fetch(apiUrl, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
@@ -34,7 +38,7 @@ app.get('/loxo-data', async (req, res) => {
         }
         const data = await response.json();
         // Log response details to track updates
-        console.log('API response at:', new Date().toISOString(), 'Data count:', data.length || 'No length property', 'Data:', data);
+        console.log('API response at:', new Date().toISOString(), 'Page:', page, 'Data count:', data.results?.length || 'No results', 'Data:', data);
         res.set('Cache-Control', 'no-cache'); // Prevent server response caching
         res.json(data);
     } catch (error) {
