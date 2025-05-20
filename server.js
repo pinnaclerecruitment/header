@@ -21,6 +21,7 @@ app.get('/loxo-data', async (req, res) => {
             headers: {
                 'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
                 'Accept': 'application/json'
+                'Cache-Control': 'no-cache'
             }
         });
         if (!response.ok) {
