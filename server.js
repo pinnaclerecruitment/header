@@ -9,6 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Log environment variables to confirm they're loaded
 console.log('Environment:', {
     token: process.env.LOXO_TOKEN ? 'Token present' : 'Token missing',
     port: process.env.PORT || 3000
@@ -32,11 +33,12 @@ app.get('/loxo-data', async (req, res) => {
             throw new Error(`Loxo error: ${response.status}`);
         }
         const data = await response.json();
-        console.log('API response at:', new Date().toISOString(), 'Data:', data);
-        res.set('Cache-Control', 'no-store');
+        // Log response details to track updates
+        console.log('API response at:', new Date().toISOString(), 'Data count:', data.length || 'No length property', 'Data:', data);
+        res.set('Cache-Control', 'no-store'); // Prevent server response caching
         res.json(data);
     } catch (error) {
-        console.error('Error fetching Loxo data:', error);
+        console.error('Error fetching Loxo data:', error.message);
         res.status(500).json({ error: error.message });
     }
 });
