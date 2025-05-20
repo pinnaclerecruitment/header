@@ -13,7 +13,7 @@ const LOXO_TOKEN = process.env.LOXO_TOKEN;
 app.get('/loxo-data', async (req, res) => {
   try {
     // Ask Loxo for only active jobs
-    const response = await axios.get('https://api.loxo.co/v1/jobs?status=active', {
+    const response = await axios.get('https://app.loxo.co/pinnacle-recruitment-services/jobs?status=active', {
       headers: {
         Authorization: `Bearer ${LOXO_TOKEN}` // Use your key to unlock Loxo’s data
       }
