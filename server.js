@@ -36,16 +36,59 @@ app.get('/virus', async (req, res) => {
             throw new Error(`Loxo error: ${response.status}`);
         }
         const data = await response.json();
-        console.log('API response at:', new Date().toISOString(), 'Page:', page, 'Data count:', data.results?.length || 'No results', 'Data:', data);
+        
+        // Fetch descriptions for each job
+        const jobsWithDescriptions = await Promise.all(data.results.map(async (job) => {
+            try {
+                const jobDetailUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs/${job.id}`;
+                const jobResponse = await fetch(jobDetailUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                if (!jobResponse.ok) {
+                    console.error(`Failed to fetch details for job ${job.id}: ${jobResponse.status}`);
+                    return { ...job, description: null };
+                }
+                const jobData = await jobResponse.json();
+                return {
+                    id: job.id,
+                    title: job.title,
+                    description: jobData.description || null,
+                    public_url: job.public_url,
+                    status: job.status,
+                    published: job.published,
+                    company: job.company,
+                    macro_address: job.macro_address,
+                    salary: job.salary
+                };
+            } catch (error) {
+                console.error(`Error fetching description for job ${job.id}:`, error.message);
+                return { ...job, description: null };
+            }
+        }));
+
+        // Log response details
+        console.log('API response at:', new Date().toISOString(), 'Page:', page, 'Data count:', jobsWithDescriptions.length);
+        jobsWithDescriptions.forEach(job => {
+            console.log(`Job ID: ${job.id}, Title: ${job.title}, Description: ${job.description || 'Not available'}`);
+        });
+
         res.set('Cache-Control', 'no-cache');
-        res.json(data);
+        res.json({
+            results: jobsWithDescriptions,
+            pagination: data.pagination
+        });
     } catch (error) {
         console.error('Error fetching Loxo data:', error.message);
         res.status(500).json({ error: error.message });
     }
 });
 
-// New route to fetch a specific job by job_id
+// Route to fetch a specific job by job_id
 app.get('/job/:job_id', async (req, res) => {
     try {
         const jobId = req.params.job_id;
@@ -63,20 +106,23 @@ app.get('/job/:job_id', async (req, res) => {
             throw new Error(`Loxo error: ${response.status}`);
         }
         const data = await response.json();
-        // Log the job description specifically
-        console.log('Job fetched at:', new Date().toISOString(), 'Job ID:', jobId, 'Title:', data.title, 'Description:', data.description);
+        // Log the job description and public_url
+        console.log('Job fetched at:', new Date().toISOString(), 'Job ID:', jobId, 'Title:', data.title, 'Description:', data.description || 'Not available', 'Public URL:', data.public_url);
         // Verify job is active and published
         if (data.status !== 'active' || !data.published) {
             return res.status(404).json({ error: `Job with ID ${jobId} is not active or published` });
         }
-        // Return only relevant fields
         res.set('Cache-Control', 'no-cache');
         res.json({
             id: data.id,
             title: data.title,
-            description: data.description,
+            description: data.description || null,
+            public_url: data.public_url,
             status: data.status,
-            published: data.published
+            published: data.published,
+            company: data.company,
+            macro_address: data.macro_address,
+            salary: data.salary
         });
     } catch (error) {
         console.error('Error fetching Loxo job:', error.message);
