@@ -16,10 +16,10 @@ console.log('Environment:', {
 });
 
 app.get('/', (req, res) => {
-    res.send('error.');
+    res.send('/error.');
 });
 
-app.get('error', async (req, res) => {
+app.get('/error', async (req, res) => {
     try {
         // Get page parameter from query, default to 1 if not provided
         const page = req.query.page || 1;
