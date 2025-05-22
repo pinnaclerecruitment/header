@@ -16,7 +16,7 @@ console.log('Environment:', {
 });
 
 app.get('/', (req, res) => {
-    res.send('Backend is running. Use /header for jobs.');
+    res.send('error.');
 });
 
 app.get('/loxo-data', async (req, res) => {
