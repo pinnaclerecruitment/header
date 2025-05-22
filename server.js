@@ -19,7 +19,7 @@ app.get('/', (req, res) => {
     res.send('error.');
 });
 
-app.get('/loxo-data', async (req, res) => {
+app.get('error', async (req, res) => {
     try {
         // Get page parameter from query, default to 1 if not provided
         const page = req.query.page || 1;
