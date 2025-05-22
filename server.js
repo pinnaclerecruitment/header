@@ -21,7 +21,6 @@ app.get('/', (req, res) => {
 
 app.get('/virus', async (req, res) => {
     try {
-        // Get page parameter from query, default to 1 if not provided
         const page = req.query.page || 1;
         const apiUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs?status=active&published=true&page=${page}`;
         
@@ -37,9 +36,8 @@ app.get('/virus', async (req, res) => {
             throw new Error(`Loxo error: ${response.status}`);
         }
         const data = await response.json();
-        // Log response details to track updates
         console.log('API response at:', new Date().toISOString(), 'Page:', page, 'Data count:', data.results?.length || 'No results', 'Data:', data);
-        res.set('Cache-Control', 'no-cache'); // Prevent server response caching
+        res.set('Cache-Control', 'no-cache');
         res.json(data);
     } catch (error) {
         console.error('Error fetching Loxo data:', error.message);
@@ -65,14 +63,21 @@ app.get('/job/:job_id', async (req, res) => {
             throw new Error(`Loxo error: ${response.status}`);
         }
         const data = await response.json();
-        // Log response details
-        console.log('API response at:', new Date().toISOString(), 'Job ID:', jobId, 'Data:', data);
+        // Log the job description specifically
+        console.log('Job fetched at:', new Date().toISOString(), 'Job ID:', jobId, 'Title:', data.title, 'Description:', data.description);
         // Verify job is active and published
         if (data.status !== 'active' || !data.published) {
             return res.status(404).json({ error: `Job with ID ${jobId} is not active or published` });
         }
+        // Return only relevant fields
         res.set('Cache-Control', 'no-cache');
-        res.json(data);
+        res.json({
+            id: data.id,
+            title: data.title,
+            description: data.description,
+            status: data.status,
+            published: data.published
+        });
     } catch (error) {
         console.error('Error fetching Loxo job:', error.message);
         res.status(500).json({ error: error.message });
