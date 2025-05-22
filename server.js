@@ -47,6 +47,38 @@ app.get('/virus', async (req, res) => {
     }
 });
 
+// New route to fetch a specific job by job_id
+app.get('/job/:job_id', async (req, res) => {
+    try {
+        const jobId = req.params.job_id;
+        const apiUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs/${jobId}?status=active&published=true`;
+        
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`Loxo error: ${response.status}`);
+        }
+        const data = await response.json();
+        // Log response details
+        console.log('API response at:', new Date().toISOString(), 'Job ID:', jobId, 'Data:', data);
+        // Verify job is active and published
+        if (data.status !== 'active' || !data.published) {
+            return res.status(404).json({ error: `Job with ID ${jobId} is not active or published` });
+        }
+        res.set('Cache-Control', 'no-cache');
+        res.json(data);
+    } catch (error) {
+        console.error('Error fetching Loxo job:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.listen(process.env.PORT || 3000, () => {
     console.log('Server is on');
 });
