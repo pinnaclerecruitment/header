@@ -23,7 +23,7 @@ app.get('/virus', async (req, res) => {
     try {
         // Get page parameter from query, default to 1 if not provided
         const page = req.query.page || 1;
-        const apiUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs?status=active&published=true&page=${page}`;
+        const apiUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs?status=active&published=true&page=${page}&description`;
         
         const response = await fetch(apiUrl, {
             method: 'GET',
