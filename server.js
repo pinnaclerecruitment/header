@@ -1,34 +1,48 @@
-// Your dataset (replace with your actual JSON data)
-const dataset = {
-  "current_page": 1,
-  "total_pages": 4,
-  "per_page": 25,
-  "total_count": 79,
-  "results": [
-    // ... your dataset here (omitted for brevity, paste your full dataset here)
-    {
-      "id": 3220151,
-      "title": "Accountant",
-      "public_url": "https://app.loxo.co/job/NDEyLXJ5NzFuYjZvMmNvaGl6YWk=",
-      // ... other fields
-    },
-    // ... other jobs
-  ]
-};
+// Base API URL
+const baseUrl = 'https://app.loxo.co/api/pinnacle-recruitment-services/jobs?status=active&published=true';
 
-// Function to fetch job descriptions concurrently
+// Function to fetch job descriptions for up to 20 pages
 async function fetchJobDescriptions() {
   try {
-    const jobs = dataset.results;
-    const promises = jobs.map(async (job) => {
-      const response = await fetch(job.public_url, {
+    const maxPages = 20;
+    const allJobs = [];
+
+    // Step 1: Fetch jobs from up to 20 pages
+    for (let page = 1; page <= maxPages; page++) {
+      const response = await fetch(`${baseUrl}&page=${page}`, {
         headers: {
-          // Add authentication headers if required (e.g., API token)
+          // Add authentication headers if required
           // 'Authorization': 'Bearer YOUR_API_TOKEN'
         }
       });
       if (!response.ok) {
-        throw new Error(`Failed to fetch ${job.public_url}: ${response.status}`);
+        console.error(`Failed to fetch page ${page}: ${response.status}`);
+        break; // Stop if the page fails (e.g., no more pages)
+      }
+      const data = await response.json();
+      allJobs.push(...data.results);
+
+      // Stop if there are no more pages
+      if (page >= data.total_pages || !data.results.length) {
+        console.log(`Reached end of pages at page ${page}`);
+        break;
+      }
+    }
+
+    // Step 2: Fetch descriptions for each job
+    const promises = allJobs.map(async (job) => {
+      const response = await fetch(job.public_url, {
+        headers: {
+          // Add authentication headers if required
+          // 'Authorization': 'Bearer YOUR_API_TOKEN'
+        }
+      });
+      if (!response.ok) {
+        console.error(`Failed to fetch description for job ${job.title}: ${response.status}`);
+        return {
+          title: job.title,
+          description: 'Description not found'
+        };
       }
       const jobDetails = await response.json();
       return {
@@ -43,6 +57,8 @@ async function fetchJobDescriptions() {
       console.log(`Description: ${result.description}`);
       console.log('---');
     });
+
+    console.log(`Fetched descriptions for ${results.length} jobs across ${Math.min(maxPages, allJobs.length / 25 + 1)} pages`);
   } catch (error) {
     console.error('Error fetching job descriptions:', error);
   }
