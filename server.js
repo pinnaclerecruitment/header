@@ -1,11 +1,11 @@
-   try {
+try {
     let allJobs = [];
     let page = 1;
-    let nextPageUrl = apiUrl; // Start with the initial API URL
+    let hasMore = true;
 
-    // Loop to fetch all pages
-    while (nextPageUrl) {
-        const response = await fetch(nextPageUrl, {
+    while (hasMore) {
+        const url = `${apiUrl}?page=${page}`;
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
@@ -20,7 +20,6 @@
 
         const data = await response.json();
 
-        // Fetch descriptions for each job in the current page
         const jobsWithDescriptions = await Promise.all(data.results.map(async (job) => {
             try {
                 const jobDetailUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs/${job.id}`;
@@ -54,22 +53,17 @@
             }
         }));
 
-        // Add jobs from this page to the cumulative list
         allJobs = [...allJobs, ...jobsWithDescriptions];
 
-        // Log response details for this page
         console.log('API response at:', new Date().toISOString(), 'Page:', page, 'Data count:', jobsWithDescriptions.length);
 
-        // Check for next page
-        if (data.pagination && data.pagination.next_page_url) {
-            nextPageUrl = data.pagination.next_page_url; // Use the next page URL if provided
+        if (data.pagination && data.pagination.total_pages && page < data.pagination.total_pages) {
             page++;
         } else {
-            nextPageUrl = null; // Exit loop if no more pages
+            hasMore = false;
         }
     }
 
-    // Log all jobs
     allJobs.forEach(job => {
         console.log(`Job ID: ${job.id}, Title: ${job.title}, Description: ${job.description || 'Not available'}`);
     });
@@ -77,7 +71,7 @@
     res.set('Cache-Control', 'no-cache');
     res.json({
         results: allJobs,
-        pagination: { total: allJobs.length } // Adjust based on API's pagination structure
+        pagination: { total: allJobs.length }
     });
 } catch (error) {
     console.error('Error fetching Loxo data:', error.message);
