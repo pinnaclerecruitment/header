@@ -21,24 +21,42 @@ app.get('/', (req, res) => {
 
 app.get('/virus', async (req, res) => {
     try {
-        const page = req.query.page || 1;
-        const apiUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs?status=active&published=true&page=${page}`;
-        
-        const response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
+        let allJobs = [];
+        let page = 1;
+        let totalPages = 1;
+
+        // Fetch all pages of active and published jobs
+        while (page <= totalPages) {
+            const apiUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs?status=active&published=true&page=${page}`;
+            
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`Loxo error: ${response.status}`);
             }
-        });
-        if (!response.ok) {
-            throw new Error(`Loxo error: ${response.status}`);
+            const data = await response.json();
+            
+            // Update total pages and append jobs
+            totalPages = data.pagination?.total_pages || 1;
+            allJobs = [...allJobs, ...(data.results || [])];
+            
+            console.log(`Fetched page ${page} of ${totalPages}, jobs: ${data.results?.length || 0}`);
+            page++;
+            
+            // Optional: Add delay to avoid rate limits (adjust as needed)
+            if (page <= totalPages) {
+                await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay
+            }
         }
-        const data = await response.json();
-        
-        // Fetch descriptions for each job
-        const jobsWithDescriptions = await Promise.all(data.results.map(async (job) => {
+
+        // Fetch descriptions for each job (limit concurrent requests to avoid rate limits)
+        const jobsWithDescriptions = await Promise.all(allJobs.map(async (job) => {
             try {
                 const jobDetailUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs/${job.id}`;
                 const jobResponse = await fetch(jobDetailUrl, {
@@ -72,7 +90,7 @@ app.get('/virus', async (req, res) => {
         }));
 
         // Log response details
-        console.log('API response at:', new Date().toISOString(), 'Page:', page, 'Data count:', jobsWithDescriptions.length);
+        console.log('API response at:', new Date().toISOString(), 'Total jobs:', jobsWithDescriptions.length);
         jobsWithDescriptions.forEach(job => {
             console.log(`Job ID: ${job.id}, Title: ${job.title}, Description: ${job.description || 'Not available'}`);
         });
@@ -80,7 +98,8 @@ app.get('/virus', async (req, res) => {
         res.set('Cache-Control', 'no-cache');
         res.json({
             results: jobsWithDescriptions,
-            pagination: data.pagination
+            total_count: jobsWithDescriptions.length,
+            fetched_at: new Date().toISOString()
         });
     } catch (error) {
         console.error('Error fetching Loxo data:', error.message);
