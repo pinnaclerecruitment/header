@@ -1,80 +1,52 @@
-// Base API URL for job listings
-const baseUrl = 'https://app.loxo.co/api/pinnacle-recruitment-services/jobs?status=active&published=true';
+const express = require('express');
+const fetch = require('node-fetch');
+const dotenv = require('dotenv');
+const cors = require('cors');
 
-// Function to fetch job descriptions for up to 20 pages
-async function fetchJobDescriptions() {
-  try {
-    const maxPages = 20;
-    const allJobs = [];
+dotenv.config();
 
-    // Step 1: Fetch jobs from up to 20 pages
-    for (let page = 1; page <= maxPages; page++) {
-      const response = await fetch(`${baseUrl}&page=${page}`, {
-        headers: {
-          // Add authentication headers if required (e.g., API token)
-          // 'Authorization': 'Bearer YOUR_API_TOKEN'
-        }
-      });
-      if (!response.ok) {
-        console.error(`Failed to fetch page ${page}: ${response.status}`);
-        break; // Stop if the page fails (e.g., no more pages)
-      }
-      const data = await response.json();
-      allJobs.push(...data.results);
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-      // Stop if there are no more pages
-      if (page >= data.total_pages || !data.results.length) {
-        console.log(`Reached end of pages at page ${page}`);
-        break;
-      }
-    }
+// Log environment variables to confirm they're loaded
+console.log('Environment:', {
+    token: process.env.LOXO_TOKEN ? 'Token present' : 'Token missing',
+    port: process.env.PORT || 3000
+});
 
-    // Step 2: Fetch descriptions from each public_url
-    const promises = allJobs.map(async (job) => {
-      try {
-        const response = await fetch(job.public_url, {
-          headers: {
-            // Add authentication headers if required
-            // 'Authorization': 'Bearer YOUR_API_TOKEN'
-          }
+app.get('/', (req, res) => {
+    res.send('/virus.');
+});
+
+app.get('/virus', async (req, res) => {
+    try {
+        // Get page parameter from query, default to 1 if not provided
+        const page = req.query.page || 1;
+        const apiUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs?status=active&published=true&page=${page}`;
+        
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
         });
         if (!response.ok) {
-          console.error(`Failed to fetch description for job ${job.title}: ${response.status}`);
-          return {
-            title: job.title,
-            id: job.id,
-            description: 'Description not found'
-          };
+            throw new Error(`Loxo error: ${response.status}`);
         }
-        const jobDetails = await response.json();
-        return {
-          title: job.title,
-          id: job.id,
-          description: jobDetails.description || 'Description not found'
-        };
-      } catch (error) {
-        console.error(`Error fetching description for job ${job.title}: ${error.message}`);
-        return {
-          title: job.title,
-          id: job.id,
-          description: 'Description not found'
-        };
-      }
-    });
+        const data = await response.json();
+        // Log response details to track updates
+        console.log('API response at:', new Date().toISOString(), 'Page:', page, 'Data count:', data.results?.length || 'No results', 'Data:', data);
+        res.set('Cache-Control', 'no-cache'); // Prevent server response caching
+        res.json(data);
+    } catch (error) {
+        console.error('Error fetching Loxo data:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
 
-    const results = await Promise.all(promises);
-    results.forEach(result => {
-      console.log(`Job ID: ${result.id}`);
-      console.log(`Job Title: ${result.title}`);
-      console.log(`Description: ${result.description}`);
-      console.log('---');
-    });
-
-    console.log(`Fetched descriptions for ${results.length} jobs across ${Math.min(maxPages, Math.ceil(allJobs.length / 25))} pages`);
-  } catch (error) {
-    console.error('Error fetching job listings:', error);
-  }
-}
-
-// Run the function
-fetchJobDescriptions();
+app.listen(process.env.PORT || 3000, () => {
+    console.log('Server is on');
+});
