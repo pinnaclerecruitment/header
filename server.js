@@ -75,7 +75,7 @@ app.get('/virus', async (req, res) => {
                     }
                 });
                 if (!jobResponse.ok) {
-                    console.error(`Failed to fetch details for job ${job.id}: ${jobResponse.status}`);
+                    console.error(`Failed to fetch details for job ${job.id}: ${jobResponse.status} ${jobResponse.statusText}`);
                     return { ...job, description: null };
                 }
                 const jobData = await jobResponse.json();
