@@ -1,52 +1,52 @@
-const express = require('express');
-const fetch = require('node-fetch');
-const dotenv = require('dotenv');
-const cors = require('cors');
+// Your dataset (replace with your actual JSON data)
+const dataset = {
+  "current_page": 1,
+  "total_pages": 4,
+  "per_page": 25,
+  "total_count": 79,
+  "results": [
+    // ... your dataset here (omitted for brevity, paste your full dataset here)
+    {
+      "id": 3220151,
+      "title": "Accountant",
+      "public_url": "https://app.loxo.co/job/NDEyLXJ5NzFuYjZvMmNvaGl6YWk=",
+      // ... other fields
+    },
+    // ... other jobs
+  ]
+};
 
-dotenv.config();
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// Log environment variables to confirm they're loaded
-console.log('Environment:', {
-    token: process.env.LOXO_TOKEN ? 'Token present' : 'Token missing',
-    port: process.env.PORT || 3000
-});
-
-app.get('/', (req, res) => {
-    res.send('/virus.');
-});
-
-app.get('/virus', async (req, res) => {
-    try {
-        // Get page parameter from query, default to 1 if not provided
-        const page = req.query.page || 1;
-        const apiUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs?status=active&published=true&page=${page}`;
-        
-        const response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${process.env.LOXO_TOKEN}`,
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
-            }
-        });
-        if (!response.ok) {
-            throw new Error(`Loxo error: ${response.status}`);
+// Function to fetch job descriptions concurrently
+async function fetchJobDescriptions() {
+  try {
+    const jobs = dataset.results;
+    const promises = jobs.map(async (job) => {
+      const response = await fetch(job.public_url, {
+        headers: {
+          // Add authentication headers if required (e.g., API token)
+          // 'Authorization': 'Bearer YOUR_API_TOKEN'
         }
-        const data = await response.json();
-        // Log response details to track updates
-        console.log('API response at:', new Date().toISOString(), 'Page:', page, 'Data count:', data.results?.length || 'No results', 'Data:', data);
-        res.set('Cache-Control', 'no-cache'); // Prevent server response caching
-        res.json(data);
-    } catch (error) {
-        console.error('Error fetching Loxo data:', error.message);
-        res.status(500).json({ error: error.message });
-    }
-});
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${job.public_url}: ${response.status}`);
+      }
+      const jobDetails = await response.json();
+      return {
+        title: job.title,
+        description: jobDetails.description || 'Description not found'
+      };
+    });
 
-app.listen(process.env.PORT || 3000, () => {
-    console.log('Server is on');
-});
+    const results = await Promise.all(promises);
+    results.forEach(result => {
+      console.log(`Job Title: ${result.title}`);
+      console.log(`Description: ${result.description}`);
+      console.log('---');
+    });
+  } catch (error) {
+    console.error('Error fetching job descriptions:', error);
+  }
+}
+
+// Run the function
+fetchJobDescriptions();
