@@ -16,10 +16,10 @@ console.log('Environment:', {
 });
 
 app.get('/', (req, res) => {
-    res.send('Backend is running. Use /loxo-data for jobs.');
+    res.send('/virus.');
 });
 
-app.get('/loxo-data', async (req, res) => {
+app.get('/virus', async (req, res) => {
     try {
         // Get page parameter from query, default to 1 if not provided
         const page = req.query.page || 1;
