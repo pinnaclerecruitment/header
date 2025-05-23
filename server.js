@@ -24,6 +24,7 @@ app.get('/virus', async (req, res) => {
         let allJobs = [];
         let page = 1;
         let totalPages = 1;
+        let pagination = {};
 
         // Fetch all pages of active and published jobs
         while (page <= totalPages) {
@@ -47,6 +48,7 @@ app.get('/virus', async (req, res) => {
             
             // Update total pages and append jobs with explicit filtering
             totalPages = data.pagination?.total_pages || 1;
+            pagination = data.pagination || {};
             const jobs = (data.results || []).filter(job => job.status === 'active' && job.published === true);
             allJobs = [...allJobs, ...jobs];
             
@@ -55,7 +57,7 @@ app.get('/virus', async (req, res) => {
             
             // Delay to avoid rate limits
             if (page <= totalPages) {
-                await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
 
@@ -105,8 +107,7 @@ app.get('/virus', async (req, res) => {
         res.set('Cache-Control', 'no-cache');
         res.json({
             results: jobsWithDescriptions,
-            total_count: jobsWithDescriptions.length,
-            fetched_at: new Date().toISOString()
+            pagination: pagination
         });
     } catch (error) {
         console.error('Error fetching Loxo data:', error.message);
@@ -133,7 +134,7 @@ app.get('/job/:job_id', async (req, res) => {
         const data = await response.json();
         
         // Log job details
-        console.log('Job fetched at:', new Date().toISOString(), 'Job ID:', jobId, 'Title:', data.title, 'Status:', data.status, 'Published:', data.published, 'Description:', data.description ? 'Available' : 'Not available');
+        console.log('Job fetched at:', new Date().toISOString(), 'Job ID:', jobId, 'Title:', data.title, 'Status:', data.status, 'Published:', data.published, 'Description:', data.description ? 'Available' : 'Not available', 'Public URL:', data.public_url);
         
         // Verify job is active and published
         if (data.status !== 'active' || !data.published) {
