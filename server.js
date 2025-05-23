@@ -38,26 +38,33 @@ app.get('/virus', async (req, res) => {
                 }
             });
             if (!response.ok) {
-                throw new Error(`Loxo error: ${response.status}`);
+                throw new Error(`Loxo API error: ${response.status} ${response.statusText}`);
             }
             const data = await response.json();
             
-            // Update total pages and append jobs
-            totalPages = data.pagination?.total_pages || 1;
-            allJobs = [...allJobs, ...(data.results || [])];
+            // Log raw response for debugging
+            console.log(`Raw API response for page ${page}:`, JSON.stringify(data, null, 2));
             
-            console.log(`Fetched page ${page} of ${totalPages}, jobs: ${data.results?.length || 0}`);
+            // Update total pages and append jobs with explicit filtering
+            totalPages = data.pagination?.total_pages || 1;
+            const jobs = (data.results || []).filter(job => job.status === 'active' && job.published === true);
+            allJobs = [...allJobs, ...jobs];
+            
+            console.log(`Fetched page ${page} of ${totalPages}, jobs on page: ${jobs.length}, total jobs: ${allJobs.length}`);
             page++;
             
-            // Optional: Add delay to avoid rate limits (adjust as needed)
+            // Delay to avoid rate limits
             if (page <= totalPages) {
                 await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay
             }
         }
 
-        // Fetch descriptions for each job (limit concurrent requests to avoid rate limits)
-        const jobsWithDescriptions = await Promise.all(allJobs.map(async (job) => {
+        // Fetch descriptions for each job with staggered requests
+        const jobsWithDescriptions = await Promise.all(allJobs.map(async (job, index) => {
             try {
+                // Stagger requests to avoid rate limits
+                await new Promise(resolve => setTimeout(resolve, index * 200));
+                
                 const jobDetailUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs/${job.id}`;
                 const jobResponse = await fetch(jobDetailUrl, {
                     method: 'GET',
@@ -92,7 +99,7 @@ app.get('/virus', async (req, res) => {
         // Log response details
         console.log('API response at:', new Date().toISOString(), 'Total jobs:', jobsWithDescriptions.length);
         jobsWithDescriptions.forEach(job => {
-            console.log(`Job ID: ${job.id}, Title: ${job.title}, Description: ${job.description || 'Not available'}`);
+            console.log(`Job ID: ${job.id}, Title: ${job.title}, Status: ${job.status}, Published: ${job.published}, Description: ${job.description ? 'Available' : 'Not available'}`);
         });
 
         res.set('Cache-Control', 'no-cache');
@@ -103,7 +110,7 @@ app.get('/virus', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching Loxo data:', error.message);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: `Failed to fetch jobs: ${error.message}` });
     }
 });
 
@@ -111,7 +118,7 @@ app.get('/virus', async (req, res) => {
 app.get('/job/:job_id', async (req, res) => {
     try {
         const jobId = req.params.job_id;
-        const apiUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs/${jobId}?status=active&published=true`;
+        const apiUrl = `https://app.loxo.co/api/pinnacle-recruitment-services/jobs/${jobId}`;
         
         const response = await fetch(apiUrl, {
             method: 'GET',
@@ -122,15 +129,18 @@ app.get('/job/:job_id', async (req, res) => {
             }
         });
         if (!response.ok) {
-            throw new Error(`Loxo error: ${response.status}`);
+            throw new Error(`Loxo API error: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
-        // Log the job description and public_url
-        console.log('Job fetched at:', new Date().toISOString(), 'Job ID:', jobId, 'Title:', data.title, 'Description:', data.description || 'Not available', 'Public URL:', data.public_url);
+        
+        // Log the job details
+        console.log('Job fetched at:', new Date().toISOString(), 'Job ID:', jobId, 'Title:', data.title, 'Status:', data.status, 'Published:', data.published, 'Description:', data.description ? 'Available' : 'Not available', 'Public URL:', data.public_url);
+        
         // Verify job is active and published
         if (data.status !== 'active' || !data.published) {
             return res.status(404).json({ error: `Job with ID ${jobId} is not active or published` });
         }
+        
         res.set('Cache-Control', 'no-cache');
         res.json({
             id: data.id,
@@ -145,10 +155,10 @@ app.get('/job/:job_id', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching Loxo job:', error.message);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: `Failed to fetch job: ${error.message}` });
     }
 });
 
 app.listen(process.env.PORT || 3000, () => {
-    console.log('Server is on');
+    console.log('Server is running on port', process.env.PORT || 3000);
 });
